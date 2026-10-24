@@ -63,10 +63,6 @@ export default function App() {
           const sessionData = await fetchSession();
           if (isMounted && sessionData.session) {
             setSession(sessionData.session);
-            // If session was not yet run on the server, trigger investigation run
-            if (sessionData.session.toolCalls.length === 0) {
-              runInvestigationAsync(sessionData.session);
-            }
           }
           return; // Success
         } catch (err) {

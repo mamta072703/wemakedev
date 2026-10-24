@@ -57,6 +57,34 @@ function getOrCreateDefaultSession(): InvestigationSession {
   return session;
 }
 
+// Pre-seed completed default session asynchronously
+async function seedDefaultCompletedSession() {
+  const { datasets, incidentDescription } = generateEcommercePaymentIncidentData();
+  try {
+    const res = await runInvestigationLoop(incidentDescription, datasets);
+    const session: InvestigationSession = {
+      id: 'default-ecommerce',
+      title: 'Storefront Order Drop & Payment Outage',
+      incidentDescription,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'COMPLETED',
+      datasets,
+      plan: res.plan,
+      toolCalls: res.toolCalls,
+      hypotheses: res.hypotheses,
+      evidence: res.evidence,
+      report: res.report,
+      corrections: [],
+      activePhase: 'COMPLETED',
+    };
+    sessionsStore.set('default-ecommerce', session);
+  } catch (err) {
+    console.warn('Initial session pre-run notice:', err);
+  }
+}
+seedDefaultCompletedSession();
+
 // 1. Health check
 app.get('/api/health', (req, res) => {
   const hasGeminiKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY');

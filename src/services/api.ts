@@ -61,13 +61,24 @@ export async function executeInvestigation(
   incidentDescription: string,
   datasets: DatasetFile[]
 ): Promise<{ success: boolean; sessionId: string; session: InvestigationSession }> {
-  const res = await fetch('/api/investigate/run', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId, incidentDescription, datasets }),
-  });
-  if (!res.ok) throw new Error('Investigation execution failed');
-  return res.json();
+  try {
+    const res = await fetch('/api/investigate/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, incidentDescription, datasets }),
+    });
+    if (!res.ok) {
+      let message = 'Investigation execution failed';
+      try {
+        const errorData = await res.json();
+        if (errorData.error) message = errorData.error;
+      } catch {}
+      throw new Error(message);
+    }
+    return res.json();
+  } catch (err: any) {
+    throw new Error(err.message || 'Investigation execution failed');
+  }
 }
 
 export async function sendCorrection(
