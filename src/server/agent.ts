@@ -22,8 +22,8 @@ import {
   executeCreateSimulatedAction,
 } from './tools';
 
-// Shared Gemini client if key is configured
-const apiKey = process.env.GEMINI_API_KEY;
+// Shared Gemini client if key is configured (safely guarded for browser and Node)
+const apiKey = typeof process !== 'undefined' && process?.env ? process.env.GEMINI_API_KEY : undefined;
 let aiClient: GoogleGenAI | null = null;
 
 if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
