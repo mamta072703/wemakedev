@@ -1,0 +1,6 @@
+{
+  "name": "VerityOps AI — Evidence-Driven Incident Investigator",
+  "description": "Don't just ask AI. Let it investigate, verify, and act. Autonomous operational incident investigation with multi-tool evidence verification.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
