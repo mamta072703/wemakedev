@@ -18,11 +18,28 @@ import {
   runToolOnDemand,
 } from './services/api';
 import { InvestigationSession, DatasetFile, CorrectionRecord } from './types/incident';
+import { generateEcommercePaymentIncidentData } from './data/demoIncidents';
 import { AlertCircle, CheckCircle2, Loader2, Sparkles, Zap } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const [session, setSession] = useState<InvestigationSession | null>(null);
+  const [session, setSession] = useState<InvestigationSession>(() => {
+    const demo = generateEcommercePaymentIncidentData();
+    return {
+      id: 'default-ecommerce',
+      title: 'Storefront Order Drop & Payment Outage',
+      incidentDescription: demo.incidentDescription,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'DRAFT',
+      datasets: demo.datasets,
+      toolCalls: [],
+      hypotheses: [],
+      evidence: [],
+      corrections: [],
+      activePhase: 'IDLE',
+    };
+  });
   const [presets, setPresets] = useState<any[]>([]);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState<boolean>(false);
@@ -30,32 +47,42 @@ export default function App() {
   const [geminiConfigured, setGeminiConfigured] = useState<boolean>(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
-  // Initialize data on load
+  // Initialize data on load with automatic retry
   useEffect(() => {
-    async function init() {
-      try {
-        const health = await fetchHealth();
-        setGeminiConfigured(health.geminiConfigured);
+    let isMounted = true;
 
-        const presetsData = await fetchPresets();
-        setPresets(presetsData.presets);
+    async function loadWithRetry(retries = 3, delayMs = 600) {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          const health = await fetchHealth();
+          if (isMounted) setGeminiConfigured(health.geminiConfigured);
 
-        const sessionData = await fetchSession();
-        setSession(sessionData.session);
+          const presetsData = await fetchPresets();
+          if (isMounted && presetsData.presets) setPresets(presetsData.presets);
 
-        // Auto-run initial investigation if draft
-        if (sessionData.session && sessionData.session.toolCalls.length === 0) {
-          runInvestigationAsync(sessionData.session);
+          const sessionData = await fetchSession();
+          if (isMounted && sessionData.session) {
+            setSession(sessionData.session);
+            // If session was not yet run on the server, trigger investigation run
+            if (sessionData.session.toolCalls.length === 0) {
+              runInvestigationAsync(sessionData.session);
+            }
+          }
+          return; // Success
+        } catch (err) {
+          if (attempt === retries) {
+            console.warn('Backend sync warning on startup, using client dataset state:', err);
+          } else {
+            await new Promise((r) => setTimeout(r, delayMs));
+          }
         }
-      } catch (err: any) {
-        console.error('Initialization error:', err);
-        setNotification({
-          type: 'error',
-          message: 'Failed to initialize session. Using fallback dataset.',
-        });
       }
     }
-    init();
+
+    loadWithRetry();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const showNotification = (type: 'success' | 'error' | 'info', message: string) => {

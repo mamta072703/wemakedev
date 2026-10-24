@@ -119,8 +119,16 @@ app.get('/api/incidents/presets', (req, res) => {
 });
 
 // 3. Get Active / Specific Session
-app.get('/api/investigate/session/:id?', (req, res) => {
-  const id = req.params.id || 'default-ecommerce';
+app.get('/api/investigate/session', (req, res) => {
+  let session = sessionsStore.get('default-ecommerce');
+  if (!session) {
+    session = getOrCreateDefaultSession();
+  }
+  res.json({ session });
+});
+
+app.get('/api/investigate/session/:id', (req, res) => {
+  const id = req.params.id;
   let session = sessionsStore.get(id);
   if (!session && id === 'default-ecommerce') {
     session = getOrCreateDefaultSession();
